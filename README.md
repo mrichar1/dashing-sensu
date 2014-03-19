@@ -1,7 +1,7 @@
 dashing-sensu
 =============
 
-A widget for Shopify's dashing project to display Sensu warning and Critical counts.
+A widget for Shopify's dashing project to display Sensu warning and critical alerts.
 
 The sample dashboard provided shows a summary widget, either showing 'OK' or containing the number of warning and/or critical alerts (coloured green, yellow or red, respectively).
 
