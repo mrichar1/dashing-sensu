@@ -3,11 +3,12 @@
 require 'net/http'
 require 'json'
 
-SENSU_API_ENDPOINT = 'https://localhost:4567'
+SENSU_API_ENDPOINT = 'http://localhost:4567'
 
-# Keep user and password blank to disable auth
-SENSU_API_USER = 'apiuser'
-SENSU_API_PASSWORD = 'sensu_api_password'
+# Set user and password if you want to enable authentication.
+# Otherwise, leave them blank.
+SENSU_API_USER = ''
+SENSU_API_PASSWORD = ''
 
 SCHEDULER.every '30s', :first_in => 0 do |job|
 
