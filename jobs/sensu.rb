@@ -5,20 +5,36 @@ require 'json'
 
 SENSU_API_ENDPOINT = 'http://localhost:4567'
 
+# Set user and password if you want to enable authentication.
+# Otherwise, leave them blank.
+SENSU_API_USER = ''
+SENSU_API_PASSWORD = ''
+
 SCHEDULER.every '30s', :first_in => 0 do |job|
 
   critical_count = 0
   warning_count = 0
   client_warning = Array.new
   client_critical = Array.new
-  uri = URI.parse(SENSU_API_ENDPOINT)
-  http = Net::HTTP.new(uri.host, uri.port)
-  response = http.request(Net::HTTP::Get.new("/clients"))
+  auth = (SENSU_API_USER.empty? || SENSU_API_PASSWORD.empty?) ? false : true
+
+  uri = URI(SENSU_API_ENDPOINT+"/clients")
+  req = Net::HTTP::Get.new(uri)
+  req.basic_auth SENSU_API_USER, SENSU_API_PASSWORD if auth
+  response = Net::HTTP.start(uri.hostname, uri.port) {|http|
+    http.request(req)
+  }
+
   clients = JSON.parse(response.body)
   clients.each do |client|
-    warn = Array.new 
+    warn = Array.new
     crit = Array.new
-    response = http.request(Net::HTTP::Get.new("/clients/#{client['name']}/history"))
+    uri = URI(SENSU_API_ENDPOINT+"/clients/#{client['name']}/history")
+    req = Net::HTTP::Get.new(uri)
+    req.basic_auth SENSU_API_USER, SENSU_API_PASSWORD if auth
+    response = Net::HTTP.start(uri.hostname, uri.port) {|http|
+      http.request(req)
+    }
     checks = JSON.parse(response.body)
     checks.each do |check|
       status = check['last_status']
