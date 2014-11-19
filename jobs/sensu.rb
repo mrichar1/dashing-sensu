@@ -18,43 +18,36 @@ SCHEDULER.every '30s', :first_in => 0 do |job|
   client_critical = Array.new
   auth = (SENSU_API_USER.empty? || SENSU_API_PASSWORD.empty?) ? false : true
 
-  uri = URI(SENSU_API_ENDPOINT+"/clients")
+  uri = URI(SENSU_API_ENDPOINT+"/events")
   req = Net::HTTP::Get.new(uri)
   req.basic_auth SENSU_API_USER, SENSU_API_PASSWORD if auth
   response = Net::HTTP.start(uri.hostname, uri.port) {|http|
     http.request(req)
   }
 
-  clients = JSON.parse(response.body)
-  clients.each do |client|
-    warn = Array.new
-    crit = Array.new
-    uri = URI(SENSU_API_ENDPOINT+"/clients/#{client['name']}/history")
-    req = Net::HTTP::Get.new(uri)
-    req.basic_auth SENSU_API_USER, SENSU_API_PASSWORD if auth
-    response = Net::HTTP.start(uri.hostname, uri.port) {|http|
-      http.request(req)
-    }
-    checks = JSON.parse(response.body)
-    checks.each do |check|
-      status = check['last_status']
-      if status == 1
-        warn.push(check['check'])
-        warning_count += 1
-      elsif status == 2
-        crit.push(check['check'])
-        critical_count += 1
-      end
+  warn = Array.new
+  crit = Array.new
+
+  events = JSON.parse(response.body)
+
+  events.each do |event|
+    status = event['check']['status']
+    if status == 1
+      warn.push(event)
+      warning_count += 1
+    elsif status == 2
+      crit.push(event)
+      critical_count += 1
     end
-    if !warn.empty?
-      warn.each do |entry|
-        client_warning.push( {:label=>client['name'], :value=>entry} )
-      end
+  end
+  if !warn.empty?
+    warn.each do |entry|
+      client_warning.push( {:label=>entry['client']['name'], :value=>entry['check']['name']} )
     end
-    if !crit.empty?
-      crit.each do |entry|
-        client_critical.push( {:label=>client['name'], :value=>entry} )
-      end
+  end
+  if !crit.empty?
+    crit.each do |entry|
+      client_critical.push( {:label=>entry['client']['name'], :value=>entry['check']['name']} )
     end
   end
 
