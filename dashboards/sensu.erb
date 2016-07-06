@@ -1,7 +1,7 @@
 <% content_for :title do %>Sensu Status<% end %>
 <div class="gridster">
   <ul>
-    <li data-row="1" data-col="1" data-sizex="1" data-sizey="2">
+    <li data-row="1" data-col="1" data-sizex="1" data-sizey="3">
       <div data-id="sensu-status" data-view="Sensu" data-unordered="true" data-title="Sensu" data-moreinfo="Unacknowledged events"></div>
     </li>
     <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
@@ -9,6 +9,9 @@
     </li>
     <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
       <div data-id="sensu-warn-list" data-view="List" data-title="Warning" />
+    </li>
+    <li data-row="1" data-col="1" data-sizex="2" data-sizey="1">
+      <div data-id="sensu-stash-list" data-view="List" data-title="Stashes" />
     </li>
 
   </ul>
