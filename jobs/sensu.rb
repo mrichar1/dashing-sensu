@@ -3,7 +3,7 @@
 require 'net/http'
 require 'json'
 
-SENSU_API_ENDPOINT = 'http://localhost:4567'
+SENSU_API_ENDPOINT = URI.parse('http://localhost:4567')
 
 # Set user and password if you want to enable authentication.
 # Otherwise, leave them blank.
@@ -18,12 +18,14 @@ SCHEDULER.every '30s', :first_in => 0 do |job|
   client_critical = Array.new
   auth = (SENSU_API_USER.empty? || SENSU_API_PASSWORD.empty?) ? false : true
 
-  uri = URI(SENSU_API_ENDPOINT+"/events")
-  req = Net::HTTP::Get.new(uri)
+  http = Net::HTTP.new(SENSU_API_ENDPOINT.host, SENSU_API_ENDPOINT.port)
+  if SENSU_API_ENDPOINT.scheme == 'https'
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+  end
+  req = Net::HTTP::Get.new(SENSU_API_ENDPOINT.path + "/events")
   req.basic_auth SENSU_API_USER, SENSU_API_PASSWORD if auth
-  response = Net::HTTP.start(uri.hostname, uri.port) {|http|
-    http.request(req)
-  }
+  response = http.request(events_req)
 
   warn = Array.new
   crit = Array.new
