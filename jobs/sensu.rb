@@ -16,7 +16,7 @@ SCHEDULER.every '30s', :first_in => 0 do |job|
   warning_count = 0
   client_warning = Array.new
   client_critical = Array.new
-  client_stash = Array.new
+  client_silenced = Array.new
   auth = (SENSU_API_USER.empty? || SENSU_API_PASSWORD.empty?) ? false : true
 
   http = Net::HTTP.new(SENSU_API_ENDPOINT.host, SENSU_API_ENDPOINT.port)
@@ -28,29 +28,26 @@ SCHEDULER.every '30s', :first_in => 0 do |job|
   events_req.basic_auth SENSU_API_USER, SENSU_API_PASSWORD if auth
   events_response = http.request(events_req)
 
-  stash_req =  Net::HTTP::Get.new(SENSU_API_ENDPOINT.path + "/stashes")
-  stash_req.basic_auth SENSU_API_USER, SENSU_API_PASSWORD if auth
-  stash_response = http.request(stash_req)
+  silenced_req =  Net::HTTP::Get.new(SENSU_API_ENDPOINT.path + "/silenced")
+  silenced_req.basic_auth SENSU_API_USER, SENSU_API_PASSWORD if auth
+  silenced_response = http.request(silenced_req)
 
   events = JSON.parse(events_response.body)
-  stashes = JSON.parse(stash_response.body)
+  silenced = JSON.parse(silenced_response.body)
 
   warn = Array.new
   crit = Array.new
-  stash = Array.new
   silence = {}
-  stashes.each do |stash|
-    type, client, check = stash['path'].split('/')
-    if type == 'silence'
-      silence[client] = check
-    end
+  silenced.each do |sil|
+    type, client, check = sil['id'].split(':')
+    silence[client] = check
   end
 
   events.each do |event|
     client_name = event['client']['name']
     if silence.key?(client_name)
-      # If value is nil, whole client is silenced
-      if silence[client_name].nil?
+      # If value is *, whole client is silenced
+      if silence[client_name] == '*'
        next
       elsif silence[client_name] && silence[client_name] == event['check']['name']
         next
@@ -77,20 +74,20 @@ SCHEDULER.every '30s', :first_in => 0 do |job|
   end
   if !silence.empty?
     silence.each do |client, check|
-      client_stash.push( {:label=>client, :value=>check} )
+      client_silenced.push( {:label=>client, :value=>check} )
     end
   end
 
-  status = "green" 
-  if critical_count > 0 
+  status = "green"
+  if critical_count > 0
     status = "red"
   elsif warning_count > 0
     status = "yellow"
   end
- 
+
   send_event('sensu-status', { criticals: critical_count, warnings: warning_count, status: status })
   send_event('sensu-warn-list', { items: client_warning })
   send_event('sensu-crit-list', { items: client_critical })
-  send_event('sensu-stash-list', { items: client_stash })
+  send_event('sensu-silenced-list', { items: client_silenced })
 
 end
